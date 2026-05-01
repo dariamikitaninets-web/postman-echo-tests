@@ -6,7 +6,7 @@ BASE = "https://postman-echo.com"
 
 def test_get_no_params_status_and_url():
     r = requests.get(f"{BASE}/get", timeout=10)
-    assert r.status_code == 201
+    assert r.status_code == 200
     data = r.json()
     assert data["url"] == f"{BASE}/get"
     assert data["args"] == {}
