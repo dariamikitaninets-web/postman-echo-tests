@@ -1,38 +1,31 @@
 name: Tests + Allure report
 
-
 on:
   push:
     branches: [ "main" ]
   workflow_dispatch:
-
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
-
 concurrency:
   group: "pages"
   cancel-in-progress: false
-
 
 jobs:
   test-and-allure:
     runs-on: ubuntu-latest
 
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
 
       - name: Install dependencies
         run: |
@@ -40,25 +33,32 @@ jobs:
           pip install -r requirements.txt
           pip install allure-pytest
 
-
       - name: Run tests (generate Allure results)
         run: |
-          pytest -q test_echo.py --alluredir=allure-results
+          pytest -q --alluredir=allure-results
 
+      - name: Set up Java (required by Allure CLI)
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Install Allure CLI
+        run: |
+          curl -fsSL -o allure.tgz https://github.com/allure-framework/allure2/releases/download/2.29.0/allure-2.29.0.tgz
+          tar -xzf allure.tgz
+          sudo mv allure-2.29.0 /opt/allure
+          sudo ln -s /opt/allure/bin/allure /usr/local/bin/allure
+          allure --version
 
       - name: Generate Allure report
-        uses: simple-elf/allure-report-action@v1.9
-        with:
-          allure_results: allure-results
-          allure_report: allure-report
-          gh_pages: gh-pages
-
+        run: |
+          allure generate allure-results -o allure-report --clean
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: allure-report
-
 
   deploy:
     needs: test-and-allure
@@ -66,7 +66,6 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
 
     steps:
       - name: Deploy to GitHub Pages
